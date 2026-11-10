@@ -81,3 +81,15 @@ Put the cost in every log line and every report: subagents launched, their model
 ## Start every new graph by hand three times
 
 Run a new graph by hand three times before you automate it. If the manual runs do not beat the old way, automating them produces mediocre work faster. The manual runs also tell you which files and gates the graph really needs, and which roles can be deleted. Fix the graph first, and promote it when three runs come out clean.
+
+## The context diet
+
+The problem. A scheduled check-in prompt grows by accretion. Every id, lane order and rule gets pasted into it so the prompt can stand alone, and the handoff note grows the same way, with each successor adding a paragraph of history. Soon the prompt is thousands of words, rewritten in full at every check-in, and the handoff note is tens of thousands of tokens that every takeover reads. Output tokens are the expensive ones, and about nine tenths of each rewrite is identical to the last.
+
+The pattern. Split the one big blob into four files. The check-in prompt becomes a short fixed procedure, a few hundred words, written once and copied unchanged. It points at one small state file, under about 1,500 words, that holds everything current and is rewritten in place as a diff. Standing rules go in a separate rules file, each with its date and the owner's own words, read once and searched after. Old history goes in an append-only history file that is never read at a takeover. The handoff note shrinks to a pointer plus numbered takeover steps. Record entries get a cap of about 150 words, carry only the facts an audit needs, and are batched: lane events between check-ins share one entry at the next check-in, and only a rule or gate change gets its own commit.
+
+What it saves. In one measured case, a third of the chief of staff's own daily spend and most of a takeover's cost. The prompt write drops from thousands of output tokens to a few hundred, a takeover reads a few thousand tokens instead of tens of thousands, and event records stop costing a commit and a push each.
+
+Risk one: a compaction in the middle of a check-in, with a prompt that no longer carries the facts. Mitigation: the procedure's first step is "read the state file", the board carries the same ids, and a successor is told the same three files.
+
+Risk two: a rule lost in the move. Mitigation: do the move by diff, with every rule accounted for in the record, and keep the old block verbatim in the history file.
